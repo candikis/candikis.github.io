@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Can — Game Designer & Developer</title>
+<meta name="description" content="Playable Unity demos, each shipped with its own design document and source.">
+<meta name="theme-color" content="#0A0E1A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230A0E1A'/%3E%3Ccircle cx='23' cy='22' r='3' fill='%234FD6E0'/%3E%3Ctext x='6' y='22' font-family='monospace' font-size='15' fill='%23F2EFE9'%3EC%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Instrument+Serif:ital@1&family=Inter:wght@400;500&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0E1A; --bg2:#0E1324; --card:#101629;
+    --line:rgba(255,255,255,0.08); --line-strong:rgba(255,255,255,0.16);
+    --text:#F2EFE9; --muted:#9AA3B8; --faint:#5C6478;
+    --cyan:#4FD6E0; --pink:#E06CC0; --orange:#FC7340;
+    --accent:#4FD6E0;
+    --display:'Space Grotesk',system-ui,sans-serif;
+    --serif:'Instrument Serif',Georgia,serif;
+    --body:'Inter',system-ui,sans-serif;
+    --mono:'Space Mono',ui-monospace,monospace;
+    --maxw:1120px;
+    --mx:0; --my:0;                   /* eased pointer, set by RAF loop */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  img{display:block;max-width:100%}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--faint)}
+  .emph{font-family:var(--serif);font-style:italic;font-weight:400}
+  .period{color:var(--orange)}
+
+  .nav{position:sticky;top:0;z-index:60;background:rgba(10,14,26,0.72);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .logo{font-family:var(--display);font-weight:600;letter-spacing:3px;font-size:16px}
+  .logo span{color:var(--orange)}
+  .nav-right{display:flex;align-items:center;gap:22px}
+  .nav-links{display:flex;gap:22px}
+  .nav-links a{font-size:14px;color:var(--muted);transition:color .2s}
+  .nav-links a:hover,.nav-links a.active{color:var(--text)}
+  .cta{font-size:13px;color:var(--orange);border:1px solid var(--orange);padding:8px 15px;border-radius:8px;transition:background .2s,color .2s}
+  .cta:hover{background:var(--orange);color:#12070a}
+
+  .hero{position:relative;text-align:center;padding:54px 0 40px;overflow:hidden}
+  .hero h1{font-family:var(--display);font-weight:500;font-size:clamp(30px,5vw,50px);line-height:1.08;letter-spacing:-1px;max-width:720px;margin:0 auto;color:var(--text)}
+  .hero .lead{color:var(--muted);font-size:16px;max-width:430px;margin:16px auto 0}
+  .chips{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .chip{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--line-strong);padding:6px 13px;border-radius:30px}
+
+  /* ---------- Portal stage: layered depth ---------- */
+  .stage{position:relative;margin:26px auto 0;height:clamp(380px,48vh,460px);perspective:1100px}
+  .depth{position:absolute;inset:0;transform-style:preserve-3d;transform:rotateY(calc(var(--mx)*5deg)) rotateX(calc(var(--my)*-5deg));transition:transform .12s linear;will-change:transform}
+  .dlayer{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    transform:translate3d(calc(var(--mx)*var(--k)*-46px),calc(var(--my)*var(--k)*-30px),0);transition:transform .12s linear;will-change:transform}
+  .far{--k:0.35} .mid{--k:0.8} .near{--k:1.3}
+
+  .haze{position:absolute;left:50%;top:42%;width:72%;height:52%;transform:translate(-50%,-50%);
+    background:radial-gradient(58% 58% at 50% 50%,color-mix(in srgb,var(--accent) 30%,transparent) 0%,transparent 70%);
+    filter:blur(18px);transition:background .7s ease}
+  .isle{position:absolute;width:66px;height:16px;border-radius:50%;opacity:.7;
+    background:radial-gradient(60% 100% at 50% 30%,#1c2334 0%,#0c111d 72%,transparent 100%);
+    box-shadow:0 -2px 12px -5px color-mix(in srgb,var(--accent) 55%,transparent)}
+  .i1{top:20%;left:15%;transform:scale(.8)} .i2{top:13%;right:17%;transform:scale(1.05)} .i3{top:50%;right:9%;transform:scale(.62)} .i4{top:56%;left:11%;transform:scale(.5)}
+
+  .portal-wrap{position:relative;animation:sway 7s ease-in-out infinite alternate}
+  .portal{position:relative;width:clamp(200px,24vw,264px);aspect-ratio:3/4.1;border-radius:1000px 1000px 16px 16px;overflow:hidden;
+    border:2px solid color-mix(in srgb,var(--accent) 85%,white 0%);
+    box-shadow:0 0 60px -10px var(--accent),0 0 130px -34px var(--accent),inset 0 0 50px -14px var(--accent);
+    transition:border-color .7s ease,box-shadow .7s ease}
+  .world{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity .8s ease}
+  .world.on{opacity:1}
+  .floor{position:absolute;left:-30%;right:-30%;bottom:0;height:52%;z-index:1;opacity:.5;pointer-events:none;transition:background .7s ease;
+    background:repeating-linear-gradient(90deg,transparent 0 26px,color-mix(in srgb,var(--accent) 60%,transparent) 26px 27px),repeating-linear-gradient(0deg,transparent 0 20px,color-mix(in srgb,var(--accent) 36%,transparent) 20px 21px);
+    transform:perspective(170px) rotateX(64deg);transform-origin:bottom center;
+    -webkit-mask-image:linear-gradient(to top,#000 0%,transparent 82%);mask-image:linear-gradient(to top,#000 0%,transparent 82%)}
+  .portal::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(72% 82% at 50% 34%,transparent 38%,rgba(8,10,18,0.78) 100%)}
+  .portal::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(180deg,rgba(10,14,26,0) 58%,rgba(10,14,26,0.5) 100%)}
+  .figure{position:absolute;left:50%;bottom:9%;width:11px;height:26px;transform:translateX(-50%);border-radius:5px 5px 2px 2px;background:#0b0b12;z-index:3;box-shadow:0 0 12px 1px color-mix(in srgb,var(--accent) 60%,transparent)}
+  .island{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);width:62%;height:22px;border-radius:50%;
+    background:radial-gradient(60% 100% at 50% 40%,#232a3d 0%,#141a2b 70%,transparent 100%)}
+  .reflection{position:absolute;left:50%;top:calc(100% - 4px);transform:translateX(-50%) scaleY(-1);width:clamp(200px,24vw,264px);height:160px;
+    background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 45%,transparent) 0%,transparent 68%);
+    filter:blur(13px);opacity:.42;border-radius:1000px 1000px 0 0;transition:background .7s ease;animation:shimmer 5s ease-in-out infinite alternate}
+  .fog{position:absolute;left:-12%;right:-12%;bottom:12%;height:130px;filter:blur(12px);
+    background:radial-gradient(60% 100% at 50% 100%,rgba(188,206,235,0.13) 0%,transparent 72%);animation:fogdrift 15s ease-in-out infinite alternate}
+  .vignette{position:absolute;inset:0;z-index:5;pointer-events:none;background:radial-gradient(78% 72% at 50% 42%,transparent 54%,rgba(10,14,26,0.62) 100%)}
+
+  @keyframes sway{from{transform:translateY(-5px)}to{transform:translateY(7px)}}
+  @keyframes shimmer{from{opacity:.3}to{opacity:.5}}
+  @keyframes fogdrift{from{transform:translateX(-20px)}to{transform:translateX(20px)}}
+
+  .carousel{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:26px}
+  .arrow{width:38px;height:38px;border-radius:50%;border:1px solid var(--line-strong);background:none;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .2s,background .2s}
+  .arrow:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+  .carousel .label{font-family:var(--mono);font-size:14px;color:var(--text);min-width:230px;text-align:center}
+  .carousel .label .num{color:var(--accent)}
+  .explore{display:block;margin:12px auto 0;font-size:13px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:var(--body);transition:color .2s}
+  .explore:hover{color:var(--text)}
+  .explore .arr{color:var(--accent)}
+
+  .sec{padding:26px 0}
+  .sec-head{display:flex;align-items:center;gap:16px;margin-bottom:22px}
+  .sec-head .rule{flex:1;height:1px;background:var(--line)}
+  .games{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .gcard{text-align:left;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card);cursor:pointer;transition:transform .25s,border-color .25s,box-shadow .25s;padding:0}
+  .gcard:hover{transform:translateY(-3px)}
+  .gcard.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 12px 34px -16px var(--accent)}
+  .gcard .thumb{height:120px;background-size:cover;background-position:center;position:relative}
+  .gcard .thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,26,0) 50%,rgba(10,14,26,0.6) 100%)}
+  .gcard .body{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .gcard .nm{font-family:var(--display);font-weight:500;font-size:15px}
+  .gcard .tg{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px}
+  .gcard .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);opacity:0;transition:opacity .2s;flex:0 0 auto}
+  .gcard.sel .dot{opacity:1}
+
+  .about p{font-size:18px;color:#D9DEEA;max-width:560px;line-height:1.7}
+  .skills{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .contact{padding:28px;border:1px solid var(--line);border-radius:16px;background:var(--bg2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+  .contact .mail{font-family:var(--display);font-size:clamp(19px,3vw,24px)}
+  .contact .mail:hover{color:var(--accent)}
+  .contact .socials{display:flex;gap:18px;font-size:14px;color:var(--muted)}
+  .contact .socials a:hover{color:var(--text)}
+  footer{padding:34px 0;text-align:center;color:var(--faint);font-size:13px;font-family:var(--mono)}
+
+  .detail{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(6,9,16,0.9);backdrop-filter:blur(6px)}
+  .detail.open{display:flex}
+  .detail .panel{position:relative;width:100%;max-width:860px;background:var(--bg2);border:1px solid var(--line-strong);border-radius:18px;overflow:hidden;transform:scale(.9);opacity:0;transition:transform .4s cubic-bezier(.2,.7,.2,1),opacity .4s}
+  .detail.open .panel{transform:scale(1);opacity:1}
+  .detail .media{position:relative;aspect-ratio:16/9;background-size:cover;background-position:center}
+  .detail .media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,26,0) 50%,rgba(14,19,36,0.85) 100%)}
+  .detail .media .play{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;color:#fff}
+  .detail .media .play span{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.4);padding:9px 16px;border-radius:30px;font-size:13px}
+  .detail iframe{width:100%;height:100%;border:0;display:block;position:relative;z-index:3}
+  .detail .info{padding:20px 24px 24px}
+  .detail .info .nm{font-family:var(--display);font-weight:600;font-size:22px}
+  .detail .info .tg{font-family:var(--mono);font-size:12px;color:var(--accent);margin-top:4px}
+  .detail .info p{color:#C7CEDC;font-size:14px;margin:12px 0 16px;max-width:560px}
+  .detail .acts{display:flex;gap:10px;flex-wrap:wrap}
+  .detail .acts a{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#DCE3EF;border:1px solid var(--line);padding:8px 14px;border-radius:8px;transition:border-color .2s,background .2s}
+  .detail .acts a:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+  .detail .close{position:absolute;top:12px;right:12px;z-index:5;width:36px;height:36px;border-radius:8px;background:rgba(10,14,26,.6);border:1px solid var(--line-strong);color:#fff;cursor:pointer;font-size:15px}
+  .detail .close:hover{border-color:var(--accent)}
+
+  .reveal{opacity:0;transform:translateY(16px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  @media (max-width:860px){
+    .games{grid-template-columns:repeat(2,1fr)}
+    .nav-links{display:none}
+    .carousel .label{min-width:0;font-size:13px}
+    .contact{flex-direction:column;align-items:flex-start}
+    .depth{transform:none}
+  }
+  @media (max-width:480px){ .games{grid-template-columns:1fr} }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .portal-wrap,.reflection,.fog{animation:none}
+    .depth,.dlayer{transform:none!important;transition:none}
+    .reveal{opacity:1;transform:none;transition:none}
+    .world,.portal,.haze,.floor,.detail .panel{transition:none}
+  }
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a href="#top" class="logo" id="logo">CAN<span>.</span></a>
+    <div class="nav-right">
+      <div class="nav-links"><a href="#games">Work</a><a href="#about">About</a><a href="#contact">Contact</a></div>
+      <a href="#contact" class="cta">Get in touch</a>
+    </div>
+  </div>
+</nav>
+
+<header id="top" class="hero">
+  <div class="wrap">
+    <h1 id="heroTitle"></h1>
+    <p class="lead" id="heroLead"></p>
+    <div class="chips" id="heroChips"></div>
+
+    <div class="stage reveal">
+      <div class="depth" id="depth">
+        <div class="dlayer far">
+          <div class="haze" id="haze"></div>
+          <span class="isle i1"></span><span class="isle i2"></span><span class="isle i3"></span><span class="isle i4"></span>
+        </div>
+        <div class="dlayer mid">
+          <div class="portal-wrap">
+            <div class="reflection" id="reflection"></div>
+            <div class="portal" id="portal">
+              <div class="world" id="worldA"></div>
+              <div class="world on" id="worldB"></div>
+              <div class="floor"></div>
+              <div class="figure"></div>
+            </div>
+            <div class="island"></div>
+          </div>
+        </div>
+        <div class="dlayer near"><div class="fog"></div></div>
+      </div>
+      <div class="vignette"></div>
+    </div>
+
+    <div class="carousel">
+      <button class="arrow" id="prev" aria-label="Previous world">&#8249;</button>
+      <div class="label"><span class="num" id="counter"></span> &mdash; <span id="gname"></span></div>
+      <button class="arrow" id="next" aria-label="Next world">&#8250;</button>
+    </div>
+    <button class="explore" id="explore">Explore this world <span class="arr">&#8599;</span></button>
+  </div>
+</header>
+
+<main id="games" class="sec">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">Selected games</span><span class="rule"></span><span class="eyebrow" id="gcount"></span></div>
+    <div class="games" id="games-grid"></div>
+  </div>
+</main>
+
+<section id="about" class="sec about">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">About</span><span class="rule"></span></div>
+    <p class="reveal" id="aboutText"></p>
+    <div class="skills" id="skills"></div>
+  </div>
+</section>
+
+<section id="contact" class="sec">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">Contact</span><span class="rule"></span></div>
+    <div class="contact">
+      <a class="mail" id="mail"></a>
+      <div class="socials" id="socials"></div>
+    </div>
+  </div>
+</section>
+
+<footer id="footer"></footer>
+
+<div class="detail" id="detail" role="dialog" aria-modal="true" aria-label="Game detail">
+  <div class="panel">
+    <button class="close" id="dClose" aria-label="Close">&#10005;</button>
+    <div class="media" id="dMedia"></div>
+    <div class="info">
+      <div class="nm" id="dName"></div>
+      <div class="tg" id="dTag"></div>
+      <p id="dDesc"></p>
+      <div class="acts" id="dActs"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   EDIT EVERYTHING HERE.
+   - world / card : image URLs (portal world + card thumbnail). "" = placeholder.
+   - accent       : the game's neon light tone.
+   - video        : YouTube ID. demo / doc / github : URLs.
+   ===================================================================== */
+const PROFILE = {
+  logo:"CAN",
+  titleBefore:"I design systems, mechanics and ", titleEmph:"worlds", titleAfter:"",
+  lead:"Playable Unity demos — each shipped with its own design document and source.",
+  chips:["GD demos","Unity 6","3D & 2D","design docs"],
+  email:"you@yourdomain.com",
+  github:"https://github.com/", linkedin:"https://www.linkedin.com/", itch:"https://itch.io/",
+  about:"Self-taught game designer from Turkey, with a background in copywriting and narrative. I focus on mechanics, systems and story — prototyping fast in Unity and documenting every build as a proper design doc.",
+  skills:["Unity 6 / URP","Systems design","Mechanics","Narrative","2D & 3D","Game design docs"],
+  footer:"Independent worlds. Built with Unity."
+};
+
+const GAMES = [
+  { name:"Neon Roguelite", tag:"PC / Roguelite", accent:"#36D6E6",
+    desc:"2D top-down rogue-lite shooter — XP, leveling and stacking power-ups.",
+    world:"", card:"", video:"", demo:"", doc:"", github:"" },
+  { name:"The Altar", tag:"3D / Puzzle", accent:"#E8B24A",
+    desc:"3D atmospheric puzzle built around a light / dark mechanic.",
+    world:"", card:"", video:"", demo:"", doc:"", github:"" },
+  { name:"Colour Sort", tag:"Mobile / Puzzle", accent:"#53C9D8",
+    desc:"Relaxing water-sort puzzle — pour, sort and solve.",
+    world:"", card:"", video:"", demo:"", doc:"", github:"" },
+  { name:"Mobile Shooter", tag:"Mobile / Action", accent:"#F0566E",
+    desc:"Fast arcade arena shooter with waves and upgrades.",
+    world:"", card:"", video:"", demo:"", doc:"", github:"" }
+];
+
+function hexA(h,al){ const n=parseInt(h.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${al})`; }
+function worldBg(a){ return `radial-gradient(120% 85% at 50% 16%, ${hexA(a,0.55)} 0%, #1a1230 42%, #0a0a16 100%), linear-gradient(180deg, ${hexA(a,0.18)}, rgba(10,10,22,0))`; }
+function cardBg(a){ return `radial-gradient(120% 120% at 30% 10%, ${hexA(a,0.5)} 0%, #1a1430 55%, #0c0c1a 100%)`; }
+
+const ICON={
+  github:'<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2 0-.3-.5-1.5.2-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 016 0C17.3 4.8 18.3 5 18.3 5c.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0012 .5z"/></svg>',
+  doc:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/></svg>',
+  demo:'<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+};
+
+document.getElementById('logo').innerHTML=PROFILE.logo+'<span>.</span>';
+document.getElementById('heroTitle').innerHTML=PROFILE.titleBefore+'<span class="emph">'+PROFILE.titleEmph+'</span>'+PROFILE.titleAfter+'<span class="period">.</span>';
+document.getElementById('heroLead').textContent=PROFILE.lead;
+document.getElementById('heroChips').innerHTML=PROFILE.chips.map(c=>'<span class="chip">'+c+'</span>').join('');
+document.getElementById('aboutText').textContent=PROFILE.about;
+document.getElementById('skills').innerHTML=PROFILE.skills.map(s=>'<span class="chip">'+s+'</span>').join('');
+const mail=document.getElementById('mail'); mail.textContent=PROFILE.email; mail.href='mailto:'+PROFILE.email;
+document.getElementById('socials').innerHTML='<a href="'+PROFILE.github+'" target="_blank" rel="noopener">GitHub</a><a href="'+PROFILE.linkedin+'" target="_blank" rel="noopener">LinkedIn</a><a href="'+PROFILE.itch+'" target="_blank" rel="noopener">itch.io</a>';
+document.getElementById('footer').textContent=PROFILE.footer;
+document.getElementById('gcount').textContent='01 — 0'+GAMES.length;
+
+const grid=document.getElementById('games-grid');
+grid.innerHTML=GAMES.map((g,i)=>`
+  <button class="gcard" data-i="${i}" aria-label="${g.name}">
+    <div class="thumb" style="background:${g.card?`url('${g.card}')`:cardBg(g.accent)};background-size:cover;background-position:center"></div>
+    <div class="body"><div><div class="nm">${g.name}</div><div class="tg">${g.tag}</div></div><span class="dot"></span></div>
+  </button>`).join('');
+
+const wA=document.getElementById('worldA'), wB=document.getElementById('worldB');
+const counter=document.getElementById('counter'), gname=document.getElementById('gname'), portal=document.getElementById('portal');
+let cur=0, topLayer=wB;
+function worldStyle(g){ return g.world?`url('${g.world}')`:worldBg(g.accent); }
+function select(i){
+  cur=(i+GAMES.length)%GAMES.length;
+  const g=GAMES[cur];
+  document.documentElement.style.setProperty('--accent',g.accent);
+  const back=(topLayer===wB)?wA:wB;
+  back.style.background=worldStyle(g); back.style.backgroundSize='cover'; back.style.backgroundPosition='center';
+  back.classList.add('on'); topLayer.classList.remove('on'); topLayer=back;
+  counter.textContent='0'+(cur+1)+' / 0'+GAMES.length;
+  gname.textContent=g.name;
+  document.querySelectorAll('.gcard').forEach((c,ci)=>c.classList.toggle('sel',ci===cur));
+}
+document.getElementById('prev').addEventListener('click',()=>select(cur-1));
+document.getElementById('next').addEventListener('click',()=>select(cur+1));
+grid.querySelectorAll('.gcard').forEach(c=>c.addEventListener('click',()=>select(+c.dataset.i)));
+select(0);
+
+/* ---------- smooth (eased) pointer depth ---------- */
+const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if(!reduce){
+  const hero=document.querySelector('.hero'), root=document.documentElement;
+  let tx=0,ty=0,cx=0,cy=0;
+  hero.addEventListener('pointermove',e=>{ const r=hero.getBoundingClientRect(); tx=(e.clientX-r.left)/r.width-0.5; ty=(e.clientY-r.top)/r.height-0.5; });
+  hero.addEventListener('pointerleave',()=>{ tx=0; ty=0; });
+  (function loop(){ cx+=(tx-cx)*0.08; cy+=(ty-cy)*0.08; root.style.setProperty('--mx',cx.toFixed(4)); root.style.setProperty('--my',cy.toFixed(4)); requestAnimationFrame(loop); })();
+}
+
+/* ---------- Explore this world → detail ---------- */
+const detail=document.getElementById('detail');
+function openDetail(){
+  const g=GAMES[cur];
+  document.getElementById('dName').textContent=g.name;
+  document.getElementById('dTag').textContent=g.tag;
+  document.getElementById('dDesc').textContent=g.desc;
+  const media=document.getElementById('dMedia');
+  if(g.video){ media.style.background='#000'; media.innerHTML='<iframe src="https://www.youtube.com/embed/'+g.video+'?autoplay=1&rel=0" allow="autoplay; fullscreen" allowfullscreen></iframe>'; }
+  else{ media.style.background=worldStyle(g); media.style.backgroundSize='cover'; media.style.backgroundPosition='center'; media.innerHTML='<div class="play"><span>'+ICON.demo+'video / GIF</span></div>'; }
+  document.getElementById('dActs').innerHTML=
+    '<a href="'+(g.demo||'#')+'" target="_blank" rel="noopener">'+ICON.demo+'Play demo</a>'+
+    '<a href="'+(g.github||'#')+'" target="_blank" rel="noopener">'+ICON.github+'GitHub</a>'+
+    '<a href="'+(g.doc||'#')+'" target="_blank" rel="noopener">'+ICON.doc+'Design doc</a>';
+  detail.classList.add('open');
+}
+function closeDetail(){ detail.classList.remove('open'); document.getElementById('dMedia').innerHTML=''; }
+document.getElementById('explore').addEventListener('click',openDetail);
+portal.addEventListener('click',openDetail); portal.style.cursor='pointer';
+document.getElementById('dClose').addEventListener('click',closeDetail);
+detail.addEventListener('click',e=>{ if(e.target===detail) closeDetail(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDetail(); });
+
+/* ---------- active nav + reveal ---------- */
+const links={}; document.querySelectorAll('.nav-links a').forEach(a=>{ const id=a.getAttribute('href').slice(1); if(id) links[id]=a; });
+const navIO=new IntersectionObserver(es=>es.forEach(en=>{ if(en.isIntersecting){ Object.values(links).forEach(x=>x.classList.remove('active')); if(links[en.target.id]) links[en.target.id].classList.add('active'); } }),{rootMargin:'-45% 0px -50% 0px'});
+['games','about','contact'].forEach(id=>{ const el=document.getElementById(id); if(el) navIO.observe(el); });
+if(!reduce){
+  const io=new IntersectionObserver(es=>es.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } }),{rootMargin:'0px 0px -8% 0px'});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  requestAnimationFrame(()=>document.querySelectorAll('.hero .reveal').forEach(el=>el.classList.add('in')));
+}else{ document.querySelectorAll('.reveal').forEach(el=>el.classList.add('in')); }
+</script>
+</body>
+</html>
